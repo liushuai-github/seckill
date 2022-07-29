@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品列表</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            getStockList();
+        })
+        function getStockList() {
+            $.ajax({
+                type:'post',
+                url:"/seckillStock/getStockList",
+                success:function(data){
+                    if (data.sku_list){
+                        $(data.sku_list).each(function (n,value) {
+                            //console.log(JSON.stringify(value));
+                            //克隆一份商品展示
+                            var stockDetailClone = $(".stockDetailClone").clone();
+                            //为克隆的商品添加class类
+                            stockDetailClone.addClass("stockDetail");
+                            //为克隆的商品移除一个类
+                            stockDetailClone.removeClass("stockDetailClone");
+                            //为克隆的商品添加css
+                            stockDetailClone.css("display","block");
+                            //改变克隆商品的img展示图片的地址
+                            stockDetailClone.find(".stockImage").attr("src",value.images);
+                            //改边克隆商品的标题
+                            stockDetailClone.find(".stockName").html(value.title);
+                            //秒杀价格
+                            var limitPrice = value.limitPrice;
+                            //商品原价
+                            var newStockPrice = value.price;
+                            //存在秒杀政策
+                            if (limitPrice){
+                                //更改商品老价格信息
+                                stockDetailClone.find(".oldStockPrice").html("￥"+parseInt(value.price));
+                                //存在秒杀，更改原价newprice，newprice原来指的就是原价格
+                                newStockPrice = limitPrice;
+                                //秒杀倒计时
+                                lasttime(value.limitEndTime,stockDetailClone);
+                            }else {
+                                //如果商品不存在秒杀信息则移除原价格展示标签
+                                stockDetailClone.find(".oldStockPrice").remove();
+                                //这个类为time的标签，就是用来显示倒计时的
+                                stockDetailClone.find(".time").html("");
+                            }
+                            //更改商品新价格信息
+                            //这个newprice其实是商品原价
+                            stockDetailClone.find(".newStockPrice").html(parseInt(newStockPrice));
+                            stockDetailClone.attr("sku_id",value.sku_id);
+                            $("#stockList").append(stockDetailClone);
+                        })
+                    }
+                },error:function(){
+                    alert("请求出错，请稍后重试");
+                }
+            });
+        }
+
+        /**
+         * 立即抢购
+         * @param obj
+         */
+        function goStockDetail(obj) {
+            var sku_id = $(obj).attr("sku_id");
+            if (!sku_id){
+                alert("商品ID=【"+sku_id+"】");
+            }
+            //跳转商品详情页
+            open("stockDetailPage.html?sku_id="+sku_id);
+        }
+
+        //初始化活动剩余时间
+        function lasttime(limitPriceTime,htmlObj){
+            //第一个参数是data类型的秒杀结束时间
+            //第二个参数是商品的js对象
+
+            //得到的是以秒为单位的值
+            var stopTime = (new Date(limitPriceTime).getTime() - new Date().getTime())/1000;//秒杀结束时间
+            setInterval(function(){
+                if (stopTime<0){
+                    htmlObj.find(".time").html("秒杀活动已结束！");
+                    return;
+                }
+                //天 小时 分 秒
+                var days = Math.floor(stopTime/(24*3600));
+                var hours =Math.floor(stopTime%(24*3600)/3600);
+                var minutes = Math.floor(stopTime%3600/60);
+                var seconds = Math.floor(stopTime%60);
+                days = days<10?"0"+days:days;
+                hours = hours<10?"0"+hours:hours;
+                minutes = minutes<10?"0"+minutes:minutes;
+                seconds = seconds<10?"0"+seconds:seconds;
+                htmlObj.find(".time").find(".days").html(days);
+                htmlObj.find(".time").find(".hours").html(hours);
+                htmlObj.find(".time").find(".minutes").html(minutes);
+                htmlObj.find(".time").find(".seconds").html(seconds);
+                stopTime--;
+            },1000);
+        }
+    </script>
+    <style type="text/css">
+        .stockDetail{
+            float: left;
+        }
+        .time{
+            line-height: 20px;
+            height: 20px;
+            width: 100%;
+        }
+        .stockName{
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div style='padding-top: 20px;'>
+        <div>
+            <img src="../resources/img/leyouStockList.png" style="width: 100%">
+        </div>
+        <div id="stockList" class="input-group input-group-lg" style="margin-bottom: 20px;margin-right: auto;margin-left: auto;width: 1200px;">
+            <div onclick="goStockDetail(this);" spu_id="" class="stockDetailClone" style="display: none;position: relative; width: 400px;">
+                <div>
+                    <img style="margin-left: auto;margin-right: auto;display: block; cursor: pointer;" class="stockImage"
+                         width="300" src="https://img12.360buyimg.com/mobilecms/s500x500_jfs/t1/39975/12/13078/78268/5d428ed3Ecb07159d/e03e34e6130c8df9.jpg">
+                </div>
+                <div class="stockName">
+
+                </div>
+                <div class="stockPrice">
+                    <span style="font-size: 18px;color: #d21e20;">￥<span class="newStockPrice">12345</span></span>
+                    <span style="font-size: 14px;text-decoration:line-through;color: #888888;" class="oldStockPrice">￥23456</span>
+                </div>
+                <div class="time">
+                    <span>抢购倒计时：</span>
+                    <span class="countDown days">00</span>
+                    <span>天</span>
+                    <span class="countDown hours">00</span>
+                    <span>时</span>
+                    <span class="countDown minutes">00</span>
+                    <span>分</span>
+                    <span class="countDown seconds">00</span>
+                    <span>秒</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
